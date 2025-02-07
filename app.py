@@ -24,9 +24,11 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
 
     def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+        from werkzeug.security import generate_password_hash
+        self.password_hash = generate_password_hash(password, method='scrypt')
 
     def check_password(self, password):
+        from werkzeug.security import check_password_hash
         return check_password_hash(self.password_hash, password)
 
 class Produto(db.Model):
@@ -78,13 +80,18 @@ def load_user(user_id):
         return None
 
 def init_db():
+    # Criar banco de dados se não existir
     with app.app_context():
         db.create_all()
         # Verificar se existe usuário admin
         admin = User.query.filter_by(username='admin').first()
         if not admin:
-            hashed_password = bcrypt.generate_password_hash('admin123').decode('utf-8')
-            admin = User(username='admin', password_hash=hashed_password, is_admin=True)
+            from werkzeug.security import generate_password_hash
+            admin = User(
+                username='admin',
+                password_hash=generate_password_hash('admin123', method='scrypt'),
+                is_admin=True
+            )
             db.session.add(admin)
             db.session.commit()
 

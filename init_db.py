@@ -1,5 +1,5 @@
-from app import app, db, User, bcrypt
-import os
+from app import app, db, User
+from werkzeug.security import generate_password_hash
 
 def init_db():
     with app.app_context():
@@ -11,8 +11,11 @@ def init_db():
 
         # Create admin user
         try:
-            hashed_password = bcrypt.generate_password_hash('admin123').decode('utf-8')
-            admin = User(username='admin', password_hash=hashed_password, is_admin=True)
+            admin = User(
+                username='admin',
+                password_hash=generate_password_hash('admin123', method='scrypt'),
+                is_admin=True
+            )
             db.session.add(admin)
             db.session.commit()
             print('Database initialized successfully!')
