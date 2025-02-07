@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: controle-estoque
+    env: python
+    buildCommand: |
+      pip install -r requirements.txt
+      pip install gunicorn
+    startCommand: gunicorn --bind 0.0.0.0:$PORT wsgi:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: FLASK_ENV
+        value: production
