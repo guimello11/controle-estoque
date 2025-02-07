@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Produtos</h2>
+        {% if current_user.is_admin %}
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProdutoModal">
+            <i class="fas fa-plus"></i> Novo Produto
+        </button>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th style="min-width: 120px;">Nome</th>
+                            <th style="min-width: 200px;">Descrição</th>
+                            <th style="min-width: 100px;">Quantidade</th>
+                            <th style="min-width: 120px;">Preço Compra</th>
+                            <th style="min-width: 120px;">Preço Venda</th>
+                            <th style="min-width: 160px;">Última Atualização</th>
+                            <th style="min-width: 120px;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for produto in produtos %}
+                        <tr {% if produto.quantidade < 10 %}class="table-warning"{% endif %}>
+                            <td>{{ produto.nome }}</td>
+                            <td>{{ produto.descricao }}</td>
+                            <td>{{ produto.quantidade }}</td>
+                            <td>R$ {{ "%.2f"|format(produto.preco_compra) }}</td>
+                            <td>R$ {{ "%.2f"|format(produto.preco_venda) }}</td>
+                            <td>{{ produto.data_atualizacao.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    {% if current_user.is_admin %}
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editarProduto({{ produto.id }})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="excluirProduto({{ produto.id }})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                    <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#retiradaModal" 
+                                            onclick="prepararRetirada({{ produto.id }}, '{{ produto.nome }}', {{ produto.quantidade }})">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Adicionar Produto -->
+<div class="modal fade" id="addProdutoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Novo Produto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('adicionar_produto') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="nome" name="nome" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="descricao" class="form-label">Descrição</label>
+                        <textarea class="form-control" id="descricao" name="descricao" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="quantidade" class="form-label">Quantidade</label>
+                        <input type="number" class="form-control" id="quantidade" name="quantidade" required min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="preco_compra" class="form-label">Preço de Compra</label>
+                        <div class="input-group">
+                            <span class="input-group-text">R$</span>
+                            <input type="number" class="form-control" id="preco_compra" name="preco_compra" required min="0" step="0.01">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="preco_venda" class="form-label">Preço de Venda</label>
+                        <div class="input-group">
+                            <span class="input-group-text">R$</span>
+                            <input type="number" class="form-control" id="preco_venda" name="preco_venda" required min="0" step="0.01">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Retirada -->
+<div class="modal fade" id="retiradaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Retirar Produto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('retirar') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" id="produto_id" name="produto_id">
+                    <p>Produto: <span id="produto_nome"></span></p>
+                    <p>Quantidade disponível: <span id="quantidade_disponivel"></span></p>
+                    <div class="mb-3">
+                        <label for="quantidade_retirada" class="form-label">Quantidade a retirar</label>
+                        <input type="number" class="form-control" id="quantidade_retirada" name="quantidade" required min="1">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Confirmar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Produto -->
+<div class="modal fade" id="editProdutoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Produto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editProdutoForm" action="" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="edit_nome" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="edit_nome" name="nome" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_descricao" class="form-label">Descrição</label>
+                        <textarea class="form-control" id="edit_descricao" name="descricao" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_quantidade" class="form-label">Quantidade</label>
+                        <input type="number" class="form-control" id="edit_quantidade" name="quantidade" required min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_preco_compra" class="form-label">Preço de Compra</label>
+                        <div class="input-group">
+                            <span class="input-group-text">R$</span>
+                            <input type="number" class="form-control" id="edit_preco_compra" name="preco_compra" required min="0" step="0.01">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_preco_venda" class="form-label">Preço de Venda</label>
+                        <div class="input-group">
+                            <span class="input-group-text">R$</span>
+                            <input type="number" class="form-control" id="edit_preco_venda" name="preco_venda" required min="0" step="0.01">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function prepararRetirada(id, nome, quantidade) {
+    document.getElementById('produto_id').value = id;
+    document.getElementById('produto_nome').textContent = nome;
+    document.getElementById('quantidade_disponivel').textContent = quantidade;
+    document.getElementById('quantidade_retirada').max = quantidade;
+}
+
+function editarProduto(id) {
+    fetch(`/produto/${id}`)
+        .then(response => response.json())
+        .then(produto => {
+            document.getElementById('edit_nome').value = produto.nome;
+            document.getElementById('edit_descricao').value = produto.descricao;
+            document.getElementById('edit_quantidade').value = produto.quantidade;
+            document.getElementById('edit_preco_compra').value = produto.preco_compra;
+            document.getElementById('edit_preco_venda').value = produto.preco_venda;
+            document.getElementById('editProdutoForm').action = `/editar_produto/${id}`;
+            new bootstrap.Modal(document.getElementById('editProdutoModal')).show();
+        });
+}
+
+function excluirProduto(id) {
+    if (confirm('Tem certeza que deseja excluir este produto?')) {
+        window.location.href = `/excluir_produto/${id}`;
+    }
+}
+
+document.getElementById('editProdutoForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const id = document.getElementById('editProdutoForm').action.split('/').pop();
+    const formData = new FormData(this);
+    
+    fetch(`/editar_produto/${id}`, {
+        method: 'POST',
+        body: formData
+    }).then(response => {
+        if (response.ok) {
+            window.location.reload();
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Logs do Sistema</h2>
+        <div class="btn-group">
+            <a href="{{ url_for('limpar_logs') }}" class="btn btn-danger" onclick="return confirm('Tem certeza que deseja limpar todos os logs?')">
+                <i class="fas fa-trash"></i> Limpar Logs
+            </a>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th style="min-width: 160px;">Data/Hora</th>
+                            <th style="min-width: 120px;">Usuário</th>
+                            <th>Ação</th>
+                            <th style="min-width: 100px;">Tipo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr>
+                            <td>{{ log.data_hora.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+                            <td>{{ log.usuario.username }}</td>
+                            <td>{{ log.acao }}</td>
+                            <td>
+                                <span class="badge {% if log.tipo == 'produto' %}bg-primary
+                                    {% elif log.tipo == 'pedido' %}bg-success
+                                    {% elif log.tipo == 'reserva' %}bg-info
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ log.tipo }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

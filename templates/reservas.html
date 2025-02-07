@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}Reservas{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    {% if current_user.is_admin %}
+    <div class="mb-4">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addReservaModal">
+            <i class="fas fa-plus me-2"></i>Nova Reserva
+        </button>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-body">
+            <div class="mb-4">
+                <label for="data_filtro" class="form-label">Filtrar por Data</label>
+                <input type="date" class="form-control" id="data_filtro" style="max-width: 200px;" 
+                       value="{{ data_atual.strftime('%Y-%m-%d') }}" onchange="filtrarReservas(this.value)">
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>WhatsApp</th>
+                            <th>Data</th>
+                            <th>Horário</th>
+                            <th>Refeição</th>
+                            <th>Status</th>
+                            {% if current_user.is_admin %}
+                            <th>Ações</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody id="reservasTableBody">
+                        {% for reserva in reservas %}
+                        <tr>
+                            <td>{{ reserva.nome_cliente }}</td>
+                            <td>
+                                <a href="https://wa.me/{{ reserva.whatsapp }}" target="_blank" class="text-decoration-none">
+                                    {{ reserva.whatsapp }}
+                                </a>
+                            </td>
+                            <td>{{ reserva.data_reserva.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ reserva.horario.strftime('%H:%M') }}</td>
+                            <td>{{ reserva.tipo_refeicao|title }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if reserva.status == 'confirmada' else 'warning' if reserva.status == 'pendente' else 'danger' }}">
+                                    {{ reserva.status|title }}
+                                </span>
+                            </td>
+                            {% if current_user.is_admin %}
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="editarReserva('{{ reserva.id }}', '{{ reserva.nome_cliente }}', '{{ reserva.whatsapp }}', '{{ reserva.data_reserva.strftime('%Y-%m-%d') }}', '{{ reserva.horario.strftime('%H:%M') }}', '{{ reserva.tipo_refeicao }}', '{{ reserva.status }}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="excluirReserva({{ reserva.id }})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Adicionar Reserva -->
+<div class="modal fade" id="addReservaModal" tabindex="-1" aria-labelledby="addReservaModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addReservaModalLabel">Nova Reserva</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('adicionar_reserva') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="nome_cliente" class="form-label">Nome do Cliente</label>
+                        <input type="text" class="form-control" id="nome_cliente" name="nome_cliente" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="whatsapp" class="form-label">WhatsApp</label>
+                        <input type="text" class="form-control" id="whatsapp" name="whatsapp" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="data_reserva" class="form-label">Data</label>
+                        <input type="date" class="form-control" id="data_reserva" name="data_reserva" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="horario" class="form-label">Horário</label>
+                        <input type="time" class="form-control" id="horario" name="horario" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="tipo_refeicao" class="form-label">Tipo de Refeição</label>
+                        <select class="form-select" id="tipo_refeicao" name="tipo_refeicao" required>
+                            <option value="almoço">Almoço</option>
+                            <option value="jantar">Jantar</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Adicionar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Reserva -->
+<div class="modal fade" id="editReservaModal" tabindex="-1" aria-labelledby="editReservaModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editReservaModalLabel">Editar Reserva</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editReservaForm" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="edit_nome_cliente" class="form-label">Nome do Cliente</label>
+                        <input type="text" class="form-control" id="edit_nome_cliente" name="nome_cliente" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_whatsapp" class="form-label">WhatsApp</label>
+                        <input type="text" class="form-control" id="edit_whatsapp" name="whatsapp" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_data_reserva" class="form-label">Data</label>
+                        <input type="date" class="form-control" id="edit_data_reserva" name="data_reserva" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_horario" class="form-label">Horário</label>
+                        <input type="time" class="form-control" id="edit_horario" name="horario" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_tipo_refeicao" class="form-label">Tipo de Refeição</label>
+                        <select class="form-select" id="edit_tipo_refeicao" name="tipo_refeicao" required>
+                            <option value="almoço">Almoço</option>
+                            <option value="jantar">Jantar</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_status" class="form-label">Status</label>
+                        <select class="form-select" id="edit_status" name="status" required>
+                            <option value="confirmada">Confirmada</option>
+                            <option value="pendente">Pendente</option>
+                            <option value="cancelada">Cancelada</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Excluir Reserva -->
+<div class="modal fade" id="deleteReservaModal" tabindex="-1" aria-labelledby="deleteReservaModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteReservaModalLabel">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Tem certeza que deseja excluir esta reserva?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="deleteReservaForm" method="POST">
+                    <button type="submit" class="btn btn-danger">Excluir</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function filtrarReservas(data) {
+    window.location.href = `/reservas?data=${data}`;
+}
+
+function editarReserva(id, nome, whatsapp, data, horario, tipo, status) {
+    document.getElementById('edit_nome_cliente').value = nome;
+    document.getElementById('edit_whatsapp').value = whatsapp;
+    document.getElementById('edit_data_reserva').value = data;
+    document.getElementById('edit_horario').value = horario;
+    document.getElementById('edit_tipo_refeicao').value = tipo;
+    document.getElementById('edit_status').value = status;
+    document.getElementById('editReservaForm').action = `/editar_reserva/${id}`;
+    
+    const modal = new bootstrap.Modal(document.getElementById('editReservaModal'));
+    modal.show();
+}
+
+function excluirReserva(id) {
+    document.getElementById('deleteReservaForm').action = `/excluir_reserva/${id}`;
+    const modal = new bootstrap.Modal(document.getElementById('deleteReservaModal'));
+    modal.show();
+}
+
+// Formatar WhatsApp enquanto digita
+document.querySelectorAll('input[name="whatsapp"]').forEach(input => {
+    input.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 11) value = value.slice(0, 11);
+        e.target.value = value;
+    });
+});
+</script>
+{% endblock %}

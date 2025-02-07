@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+
+{% block title %}Produtos{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    {% if current_user.is_admin %}
+    <div class="mb-4">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+            <i class="fas fa-plus me-2"></i>Adicionar Produto
+        </button>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Quantidade</th>
+                            <th>Preço de Compra</th>
+                            <th>Preço de Venda</th>
+                            <th>Última Atualização</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for produto in produtos %}
+                        <tr>
+                            <td>{{ produto.nome }}</td>
+                            <td>{{ produto.quantidade }}</td>
+                            <td>R$ {{ "%.2f"|format(produto.preco_compra) }}</td>
+                            <td>R$ {{ "%.2f"|format(produto.preco_venda) }}</td>
+                            <td>{{ produto.data_atualizacao.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                {% if current_user.is_admin %}
+                                <button class="btn btn-sm btn-primary" onclick="editarProduto({{ produto.id }})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                {% endif %}
+                                <button class="btn btn-sm btn-success" onclick="retirarProduto({{ produto.id }})">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Adicionar Produto -->
+{% if current_user.is_admin %}
+<div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addProductModalLabel">Adicionar Produto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('adicionar') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="nome" name="nome" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="quantidade" class="form-label">Quantidade</label>
+                        <input type="number" class="form-control" id="quantidade" name="quantidade" required min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="preco_compra" class="form-label">Preço de Compra</label>
+                        <input type="number" class="form-control" id="preco_compra" name="preco_compra" required min="0" step="0.01">
+                    </div>
+                    <div class="mb-3">
+                        <label for="preco_venda" class="form-label">Preço de Venda</label>
+                        <input type="number" class="form-control" id="preco_venda" name="preco_venda" required min="0" step="0.01">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Adicionar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal Retirar Produto -->
+<div class="modal fade" id="withdrawProductModal" tabindex="-1" aria-labelledby="withdrawProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="withdrawProductModalLabel">Retirar Produto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="withdrawForm" action="" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="quantidade_retirada" class="form-label">Quantidade</label>
+                        <input type="number" class="form-control" id="quantidade_retirada" name="quantidade" required min="1">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Retirar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Produto -->
+<div class="modal fade" id="editProductModal" tabindex="-1" aria-labelledby="editProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editProductModalLabel">Editar Produto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editForm" action="" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="edit_nome" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="edit_nome" name="nome" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_quantidade" class="form-label">Quantidade</label>
+                        <input type="number" class="form-control" id="edit_quantidade" name="quantidade" required min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_preco_compra" class="form-label">Preço de Compra</label>
+                        <input type="number" class="form-control" id="edit_preco_compra" name="preco_compra" required min="0" step="0.01">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_preco_venda" class="form-label">Preço de Venda</label>
+                        <input type="number" class="form-control" id="edit_preco_venda" name="preco_venda" required min="0" step="0.01">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function retirarProduto(id) {
+    const modal = new bootstrap.Modal(document.getElementById('withdrawProductModal'));
+    document.getElementById('withdrawForm').action = `/retirar/${id}`;
+    modal.show();
+}
+
+function editarProduto(id) {
+    fetch(`/editar_produto/${id}`)
+        .then(response => response.json())
+        .then(produto => {
+            document.getElementById('edit_nome').value = produto.nome;
+            document.getElementById('edit_quantidade').value = produto.quantidade;
+            document.getElementById('edit_preco_compra').value = produto.preco_compra;
+            document.getElementById('edit_preco_venda').value = produto.preco_venda;
+            document.getElementById('editForm').action = `/editar_produto/${id}`;
+            const modal = new bootstrap.Modal(document.getElementById('editProductModal'));
+            modal.show();
+        });
+}
+</script>
+{% endblock %}
