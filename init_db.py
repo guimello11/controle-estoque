@@ -1,5 +1,4 @@
 from app import app, db, User
-from werkzeug.security import generate_password_hash
 
 def init_db():
     with app.app_context():
@@ -11,11 +10,8 @@ def init_db():
 
         # Create admin user
         try:
-            admin = User(
-                username='admin',
-                password_hash=generate_password_hash('admin123', method='scrypt'),
-                is_admin=True
-            )
+            admin = User(username='admin', is_admin=True)
+            admin.set_password('admin123')
             db.session.add(admin)
             db.session.commit()
             print('Database initialized successfully!')

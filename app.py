@@ -1,18 +1,16 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
-from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from datetime import datetime, date
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'sua_chave_secreta'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///estoque.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
-bcrypt = Bcrypt(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -24,11 +22,9 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
 
     def set_password(self, password):
-        from werkzeug.security import generate_password_hash
         self.password_hash = generate_password_hash(password, method='scrypt')
 
     def check_password(self, password):
-        from werkzeug.security import check_password_hash
         return check_password_hash(self.password_hash, password)
 
 class Produto(db.Model):
@@ -86,12 +82,11 @@ def init_db():
         # Verificar se existe usuário admin
         admin = User.query.filter_by(username='admin').first()
         if not admin:
-            from werkzeug.security import generate_password_hash
             admin = User(
                 username='admin',
-                password_hash=generate_password_hash('admin123', method='scrypt'),
                 is_admin=True
             )
+            admin.set_password('admin123')
             db.session.add(admin)
             db.session.commit()
 
