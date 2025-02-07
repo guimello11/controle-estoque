@@ -79,17 +79,14 @@ def load_user(user_id):
 
 def init_db():
     with app.app_context():
-        try:
-            db.create_all()
-            # Criar usuário admin padrão se não existir
-            if not User.query.filter_by(username='admin').first():
-                admin = User(username='admin', is_admin=True)
-                admin.set_password('admin123')
-                db.session.add(admin)
-                db.session.commit()
-        except Exception as e:
-            print(f"Error initializing database: {e}")
-            db.session.rollback()
+        db.create_all()
+        # Verificar se existe usuário admin
+        admin = User.query.filter_by(username='admin').first()
+        if not admin:
+            hashed_password = bcrypt.generate_password_hash('admin123').decode('utf-8')
+            admin = User(username='admin', password_hash=hashed_password, is_admin=True)
+            db.session.add(admin)
+            db.session.commit()
 
 def registrar_log(acao, tipo):
     if current_user.is_authenticated:
